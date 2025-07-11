@@ -58,34 +58,61 @@
 <body>
 
 <?php
+// Abilita errori in sviluppo
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
+
+// Carica configurazione
+$config = include(__DIR__ . '/../config/config.php');
+$env = $config['env'];
+$apiBase = $config['urls'][$env];
 
 include_once '../Classes/DBM.php';
 
 $myYear = date("Y");
 $dbm = new DBM();
 
+// Pulisci le tabelle
 $dbm->write("DELETE FROM year$myYear");
 $dbm->write("DELETE FROM quad$myYear");
 
-$dataJson = getFileMrk($myYear);
-if (!$dataJson || !isset($dataJson['estrazioni']) || !isset($dataJson['ruote'])) {
-    die("Errore: dati non validi dal microservizio");
+// Recupera dati dal microservizio proxy
+$values = getFileMrk($myYear);
+if (!$values || !is_array($values)) {
+    die("Errore: impossibile leggere i dati dal proxy.");
 }
 
-$ruote = $dataJson['ruote'];
-$estrazioni = $dataJson['estrazioni'];
+// Estrai nomi ruote
+$ruote = $values[0]['th'];
+$arrayruote = array_slice($ruote, 1);
 
-foreach ($estrazioni as $idx => $estrazione) {
-    $tmpEst = $idx + 1;
-    $data = trim($estrazione['data']) . " " . $myYear;
-    $valori = $estrazione['valori'];
+$estrazioni_Arr = $values;
+$estrazioni = count($estrazioni_Arr) - 1; // Salta header
+$f = 0;
 
-    $dbm->write("INSERT INTO year$myYear VALUES($tmpEst, '$data', '" . json_encode($valori) . "')");
+foreach ($estrazioni_Arr as $row) {
+    if ($f++ == 0) continue;
 
-    foreach ($valori as $ruota => $val) {
-        $estrat = explode('.', $val);
+    $tmpEst = --$estrazioni;
+    $tmpData = getData($row['data']) . $myYear;
+    $aux = [];
+
+    foreach ($arrayruote as $index => $ruota) {
+        $estraz = $row['valori'][$index] ?? null;
+        $cells = preg_replace('/\s+/', '.', trim($estraz));
+
+        if (!in_array($cells, ["00.00.00.00.00", "00.00.00.00.00 "]) && strlen($cells) > 1) {
+            $aux[$ruota] = str_replace(' ', '', $cells);
+        }
+    }
+
+    if (!empty($aux)) {
+        $sql = "INSERT INTO year$myYear VALUES($tmpEst, '$tmpData', '" . json_encode($aux) . "')";
+        $dbm->write($sql);
+    }
+
+    foreach ($aux as $ruota => $valori) {
+        $estrat = explode('.', $valori);
         for ($i = 0; $i < 5; $i++) {
             for ($j = $i + 1; $j < 5; $j++) {
                 if (getDistance($estrat[$i], $estrat[$j]) === 'x') {
@@ -93,17 +120,30 @@ foreach ($estrazioni as $idx => $estrazione) {
                     $val1 = (int)$estrat[$i];
                     $val2 = (int)$estrat[$j];
                     $distanza = ($i + 1) . '-' . ($j + 1);
-                    $dbm->write("INSERT INTO quad$myYear VALUES('$data','$ruota',$tmpEst,'$distanza','$tripla',$val1,$val2)");
+                    $dbm->write("INSERT INTO quad$myYear VALUES('$tmpData','$ruota',$tmpEst,'$distanza','$tripla',$val1,$val2)");
                 }
             }
         }
     }
 }
 
+function getData($str) {
+    $space = strpos($str, ' ');
+    $day = substr($str, 0, $space);
+    $mon = substr($str, $space + 1);
+    if (strlen($day) == 1) $day = '0' . $day;
+    return $day . ' ' . $mon . ' ';
+}
+
 function getFileMrk($year) {
-    $url = 'https://lotto2025.vercel.app/api/estrazioni?year=' . $year;
+    $urlBase = $config['urls'][$config['env']];
+    $url = $urlBase . '?year=' . $year;
+
     $response = file_get_contents($url);
-    if (!$response) return null;
+    if (!$response) {
+        die("Errore nel recupero dati JSON");
+    }
+
     return json_decode($response, true);
 }
 
@@ -114,9 +154,8 @@ function getDistance($x, $y) {
 }
 
 function getTripla($val) {
-    $val = (string)$val;
-    $sum = (int)$val[0] + (int)$val[1];
-    $value = ($sum > 9) ? $sum - 9 : $sum;
+    $value = (isset($val[1])) ? $val[1] + $val[0] : $val[0];
+    if ($value > 9) $value -= 9;
 
     if (in_array($value, [1, 4, 7])) return '1-4-7';
     if (in_array($value, [2, 5, 8])) return '2-5-8';
@@ -134,7 +173,7 @@ function getTripla($val) {
     <div class="item" url="modulo_uno"><div class="title">modulo 1</div><div class="content">Calcolo di uscite in base a configurazione</div></div>
     <div class="item" url="modulo_due"><div class="title">modulo 2</div><div class="content">Calcolo delle sestine</div></div>
     <div class="item" url="modulo_tre"><div class="title">modulo 3</div><div class="content">Tabelloni ambi, terne e quaterne</div></div>
-    <div class="item" url="TotaliSestine"><div class="title">Sestine</div><div class="content">Elenco sestine</div></div>
+    <div class="item" style="margin-top: 30px;" url="TotaliSestine"><div class="title">Sestine</div><div class="content">Elenco sestine</div></div>
     <div class="item" style="margin-top: 30px;" url="elencoSestine"><div class="title">Trova pagine sestine</div><div class="content">Trova pagine sestine</div></div>
     <div class="item" style="margin-top: 30px;" url="nSestine"><div class="title">Trova terni e quaterne</div><div class="content">Trova pagine sestine</div></div>
 </center>
