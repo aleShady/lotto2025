@@ -22,11 +22,8 @@ module.exports = async (req, res) => {
     }
 
     const html = $.html(table);
-    res.status(200).json({ html, year, status: "ok" });
+    res.status(200).json({ html, year });
   } catch (err) {
-    res.status(500).json({
-      error: 'Errore durante scraping o richiesta',
-      details: err.message,
-    });
+    res.status(500).json({ error: 'Errore scraping', details: err.message });
   }
 };
