@@ -22,6 +22,10 @@ module.exports = async (req, res) => {
     const tableHTML = $.html(table);
     return res.status(200).json({ html: tableHTML, year });
   } catch (err) {
-    return res.status(500).json({ error: 'Errore durante il parsing', details: err.message });
+    return res.status(500).json({
+      error: 'Errore durante il parsing',
+      details: err.message,
+      stack: err.stack
+    });
   }
 };
