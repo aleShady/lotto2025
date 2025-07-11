@@ -1,9 +1,7 @@
-// ./api/estrazioni.js
+const axios = require('axios');
+const cheerio = require('cheerio');
 
-import axios from 'axios';
-import * as cheerio from 'cheerio';
-
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
   const year = req.query.year || new Date().getFullYear();
 
   try {
@@ -26,4 +24,4 @@ export default async function handler(req, res) {
   } catch (err) {
     return res.status(500).json({ error: 'Errore durante il parsing', details: err.message });
   }
-}
+};
