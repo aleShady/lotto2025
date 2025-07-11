@@ -1,45 +1,29 @@
-// /api/estrazioni.js (da inserire nella cartella "api")
+// ./api/estrazioni.js
 
-import { NextResponse } from 'next/server';
+import axios from 'axios';
 import * as cheerio from 'cheerio';
 
-export async function GET(request) {
-  const { searchParams } = new URL(request.url);
-  const year = searchParams.get('year') || new Date().getFullYear();
-
-  const url = `https://www.lottologia.com/lotto/?do=past-draws-archive&table_view_type=default&year=${year}&numbers=`;
+export default async function handler(req, res) {
+  const year = req.query.year || new Date().getFullYear();
 
   try {
-    const res = await fetch(url, {
+    const url = `https://www.lottologia.com/lotto/?do=past-draws-archive&table_view_type=default&year=${year}&numbers=`;
+    const response = await axios.get(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0'
       }
     });
 
-    if (!res.ok) {
-      return NextResponse.json({ error: 'Errore nel recupero del sito' }, { status: 500 });
+    const $ = cheerio.load(response.data);
+    const table = $('table');
+
+    if (!table || table.length === 0) {
+      return res.status(500).json({ error: 'Tabella non trovata nel sito' });
     }
 
-    const html = await res.text();
-    const $ = cheerio.load(html);
-
-    const tables = $('table');
-    if (!tables || tables.length === 0) {
-      return NextResponse.json({ error: 'Tabella non trovata' }, { status: 404 });
-    }
-
-    const result = [];
-    tables.first().find('tr').each((_, row) => {
-      const estrazione = [];
-      $(row).find('td').each((_, cell) => {
-        estrazione.push($(cell).text().trim());
-      });
-      if (estrazione.length > 0) result.push(estrazione);
-    });
-
-    return NextResponse.json({ year, data: result });
-
-  } catch (error) {
-    return NextResponse.json({ error: 'Errore server: ' + error.message }, { status: 500 });
+    const tableHTML = $.html(table);
+    return res.status(200).json({ html: tableHTML, year });
+  } catch (err) {
+    return res.status(500).json({ error: 'Errore durante il parsing', details: err.message });
   }
 }
