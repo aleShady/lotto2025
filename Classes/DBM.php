@@ -1,35 +1,24 @@
-<?php $ {
-    "GLOBALS"
-}
-["sdbuxorjpuvb"] = "sql";
+<?php
 class DBM {
     private $con;
-    public function DBM() {
-        $this->con = new PDO("mysql:host=localhost;dbname=my_dsantarella", "root", "");
-    }
-    public function read($sql) {
-        $ {
-            "GLOBALS"
+
+    public function __construct() {
+        try {
+            $this->con = new PDO("mysql:host=localhost;dbname=dsantarella", "root", "");
+            $this->con->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        } catch (PDOException $e) {
+            die("Errore connessione DB: " . $e->getMessage());
         }
-        ["qawcbe"] = "tmp";
-        $ {
-            $ {
-                "GLOBALS"
-            }
-            ["qawcbe"]
-        } = $this->con->prepare($ {
-            $ {
-                "GLOBALS"
-            }
-            ["sdbuxorjpuvb"]
-        });
-        $tmp->execute();
-        return $tmp->fetchAll(PDO::FETCH_ASSOC);
     }
-    public function write($sql) {
-        $gfhbzdue = "sql";
-        return $this->con->query($ {
-            $gfhbzdue
-        });
+
+    public function read(string $sql): array {
+        $stmt = $this->con->prepare($sql);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-} ?>
+
+    public function write(string $sql): bool {
+        return $this->con->exec($sql) !== false;
+    }
+}
+?>
