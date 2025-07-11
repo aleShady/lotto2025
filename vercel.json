@@ -5,5 +5,11 @@
       "src": "api/estrazioni.js",
       "use": "@vercel/node"
     }
+  ],
+  "routes": [
+    {
+      "src": "/api/estrazioni",
+      "dest": "api/estrazioni.js"
+    }
   ]
 }
