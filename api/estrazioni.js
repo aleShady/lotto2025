@@ -1,27 +1,45 @@
-// api/estrazioni.js
-import { JSDOM } from "jsdom";
+// /api/estrazioni.js (da inserire nella cartella "api")
 
-export default async function handler(req, res) {
-  const year = req.query.year || new Date().getFullYear();
+import { NextResponse } from 'next/server';
+import * as cheerio from 'cheerio';
+
+export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+  const year = searchParams.get('year') || new Date().getFullYear();
+
   const url = `https://www.lottologia.com/lotto/?do=past-draws-archive&table_view_type=default&year=${year}&numbers=`;
 
   try {
-    const response = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0' }
-    });
-    const html = await response.text();
-    const dom = new JSDOM(html);
-    const doc = dom.window.document;
-
-    const table = doc.querySelector("table");
-    if (!table) return res.status(500).json({ error: "Nessuna tabella trovata" });
-
-    const rows = [...table.querySelectorAll("tr")].map(tr => {
-      return [...tr.querySelectorAll("th, td")].map(td => td.textContent.trim());
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0'
+      }
     });
 
-    res.status(200).json(rows);
+    if (!res.ok) {
+      return NextResponse.json({ error: 'Errore nel recupero del sito' }, { status: 500 });
+    }
+
+    const html = await res.text();
+    const $ = cheerio.load(html);
+
+    const tables = $('table');
+    if (!tables || tables.length === 0) {
+      return NextResponse.json({ error: 'Tabella non trovata' }, { status: 404 });
+    }
+
+    const result = [];
+    tables.first().find('tr').each((_, row) => {
+      const estrazione = [];
+      $(row).find('td').each((_, cell) => {
+        estrazione.push($(cell).text().trim());
+      });
+      if (estrazione.length > 0) result.push(estrazione);
+    });
+
+    return NextResponse.json({ year, data: result });
+
   } catch (error) {
-    res.status(500).json({ error: error.toString() });
+    return NextResponse.json({ error: 'Errore server: ' + error.message }, { status: 500 });
   }
 }
