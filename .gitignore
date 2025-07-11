@@ -1,0 +1,42 @@
+# Cartelle comuni da escludere
+vendor/               # Se usi Composer, i pacchetti installati
+node_modules/         # Se usi anche npm
+tmp/
+temp/
+cache/
+logs/
+*.log
+
+# File di configurazione locali
+.env
+.env.local
+.env.*.local
+
+# Backup o file temporanei
+*.bak
+*.tmp
+*.swp
+*.swo
+*.old
+*.orig
+
+# File di sistema
+.DS_Store             # macOS
+Thumbs.db            # Windows
+desktop.ini
+
+# IDE/editor config
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Sistema operativo
+ehthumbs.db
+*.lnk
+
+# File specifici di XAMPP (se lavorassi nella root di C:\xampp\htdocs)
+# (questi solo se stai versionando direttamente la cartella di XAMPP, sconsigliato)
+mysql/
+apache/
+php/
